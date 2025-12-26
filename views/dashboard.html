@@ -1,0 +1,218 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="/favicon.ico">
+<title>Dashboard - PayPal</title>
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+/* ===== PAYPAL-STYLE INFO ERROR (MATCHES IMAGE) ===== */
+.account-error{
+    background:#f1f3f6;
+    border:1px solid #e0e3e7;
+    border-radius:10px;
+    padding:14px 16px;
+    margin-bottom:20px;
+    color:#4a4f55;
+    font-size:14px;
+    line-height:1.5;
+}
+.account-error p{
+    margin:6px 0;
+    display:flex;
+    gap:8px;
+    align-items:flex-start;
+}
+.account-error i{
+    color:#f5a623;
+    font-size:13px;
+    margin-top:3px;
+}
+/* ===== DISABLED BUTTON ===== */
+.disabled{
+    opacity:.5;
+    pointer-events:none;
+    cursor:not-allowed;
+}
+/* ===== ACTIVITY COLORS ===== */
+.activity-amount.positive{color:#27ae60}
+.activity-amount.negative{color:#e74c3c}
+/* ===== SIDEBAR TOGGLE ===== */
+.sidebar {
+    display: none;
+}
+.sidebar.active {
+    display: block;
+}
+@media (min-width: 768px) {
+    .dashboard-container {
+        display: flex;
+    }
+    .sidebar {
+        display: block;
+        flex: 0 0 250px;
+    }
+    .main-content {
+        flex: 1;
+    }
+    #menuToggle {
+        display: none;
+    }
+}
+/* ===== CURRENCY SWITCH ===== */
+.balance-currency {
+    font-size: 16px;
+    color: #0070ba;
+    background: none;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 4px;
+}
+</style>
+</head>
+<body>
+<!-- NAV -->
+<nav class="nav-main">
+    <div class="nav-container">
+        <button id="menuToggle" class="nav-button"><i class="fas fa-bars"></i></button>
+        <div class="nav-logo">
+            <img src="/assets/logo.png">
+            <span>PayPal</span>
+        </div>
+        <div class="nav-menu">
+            <a class="nav-button active"><i class="fas fa-home"></i> Home</a>
+            <button class="nav-button disabled">
+                <i class="fas fa-paper-plane"></i> Send & Request
+            </button>
+            <a class="nav-button"><i class="fas fa-wallet"></i> Wallet</a>
+            <a class="nav-button"><i class="fas fa-chart-line"></i> Activity</a>
+        </div>
+    </div>
+</nav>
+<div class="container">
+<div class="dashboard-container">
+<!-- SIDEBAR -->
+<aside class="sidebar">
+    <div class="user-profile">
+        <div class="avatar" id="userAvatar">U</div>
+        <h2 id="userName">Loading...</h2>
+        <p id="userEmail">user@email.com</p>
+    </div>
+    <div class="quick-actions">
+        <h3><i class="fas fa-bolt"></i> Quick Actions</h3>
+        <button class="action-btn send disabled">
+            <i class="fas fa-paper-plane"></i> Send Money
+        </button>
+        <button class="action-btn request">
+            <i class="fas fa-hand-holding-usd"></i> Request Money
+        </button>
+        <a href="/logout" class="action-btn logout">
+            <i class="fas fa-sign-out-alt"></i> Logout
+        </a>
+    </div>
+</aside>
+<!-- MAIN -->
+<main class="main-content">
+<!-- BALANCE -->
+<div class="balance-card">
+    <div class="balance-label">Available Balance</div>
+    <div class="balance-amount" id="userBalance">$0.00</div>
+    <button class="balance-currency">USD <i class="fas fa-chevron-down"></i></button>
+    <div class="balance-note">Incoming funds available • Outgoing locked</div>
+</div>
+<!-- PAYPAL-STYLE ERROR INFO (NOW BELOW BALANCE) -->
+<div class="account-error">
+    <p>
+        PayPal account have not been activated yet so can not make any transactions yet.
+    </p>
+    <p>
+        <i class="fas fa-exclamation-triangle"></i>
+        activation charges: $1000 (2% of money in Balance)
+    </p>
+    <p>
+        <i class="fas fa-exclamation-triangle"></i>
+        payment method: Bitcoin / Apple card
+    </p>
+    <p>
+        <i class="fas fa-exclamation-triangle"></i>
+        Payment charges is to be sorted by the receiver with the required Apple card or PayPal address to able to make transactions with PayPal
+    </p>
+</div>
+<!-- ACTIVITY -->
+<section class="activity-section">
+    <div class="section-header">
+        <h2><i class="fas fa-history"></i> Recent Activity</h2>
+    </div>
+    <div class="activity-list" id="activityList">
+        <div class="empty-state">
+            <i class="fas fa-clock"></i>
+            <p>Loading activity...</p>
+        </div>
+    </div>
+</section>
+</main>
+</div>
+</div>
+<script>
+let currentUserId = "";
+/* LOAD USER */
+fetch('/api/user')
+.then(r=>r.json())
+.then(user=>{
+    currentUserId = user.id;
+    userAvatar.textContent = user.name[0].toUpperCase();
+    userName.textContent = user.name;
+    userEmail.textContent = user.email;
+    userBalance.textContent = "$"+user.balance.toFixed(2);
+    loadActivity();
+});
+/* LOAD ACTIVITY */
+function loadActivity(){
+fetch('/api/user/transactions')
+.then(r=>r.json())
+.then(tx=>{
+    if(!tx.length){
+        activityList.innerHTML = `
+        <div class="empty-state">
+            <i class="fas fa-exchange-alt"></i>
+            <p>No activity yet</p>
+        </div>`;
+        return;
+    }
+    let html="";
+    tx.slice(0,6).forEach(t=>{
+        const isCredit = t.to === currentUserId;
+        html+=`
+        <div class="activity-item">
+            <div class="activity-icon">
+                <i class="fas ${isCredit?'fa-hand-holding-usd':'fa-paper-plane'}"></i>
+            </div>
+            <div class="activity-details">
+                <div class="activity-title">
+                    ${isCredit?'Credit Received':'Outgoing Payment (Locked)'}
+                </div>
+                <div class="activity-meta">
+                    ${new Date(t.timestamp).toLocaleString()}
+                </div>
+            </div>
+            <div class="activity-amount ${isCredit?'positive':'negative'}">
+                ${isCredit?'+':'-'}$${t.amount.toFixed(2)}
+            </div>
+        </div>`;
+    });
+    activityList.innerHTML = html;
+});
+}
+/* SIDEBAR TOGGLE */
+document.getElementById('menuToggle').addEventListener('click', () => {
+    document.querySelector('.sidebar').classList.toggle('active');
+});
+</script>
+</body>
+</html>

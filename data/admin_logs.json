@@ -1,0 +1,113 @@
+[
+  {
+    "action": "login",
+    "adminId": "admin001",
+    "details": {
+      "email": "jeffreyudenze@gmail.com"
+    },
+    "timestamp": "2025-12-24T12:05:20.848Z",
+    "ip": "127.0.0.1"
+  },
+  {
+    "action": "add_balance",
+    "adminId": "admin001",
+    "details": {
+      "targetUser": "user_1766577892659",
+      "targetUserName": "Nancy longerbeam",
+      "targetUserEmail": "admin@test.com",
+      "amount": 1000,
+      "oldBalance": 0,
+      "newBalance": 1000,
+      "note": "FROM JEPHTER"
+    },
+    "timestamp": "2025-12-24T12:06:09.675Z",
+    "ip": "127.0.0.1"
+  },
+  {
+    "action": "login",
+    "adminId": "admin001",
+    "details": {
+      "email": "jeffreyudenze@gmail.com"
+    },
+    "timestamp": "2025-12-24T12:24:49.547Z",
+    "ip": "127.0.0.1"
+  },
+  {
+    "action": "add_balance",
+    "adminId": "admin001",
+    "details": {
+      "targetUser": "user_1766578896830",
+      "targetUserName": "Nancy longerbeam",
+      "targetUserEmail": "reeky4@gmail.com",
+      "amount": 1000,
+      "oldBalance": 0,
+      "newBalance": 1000,
+      "note": "REEKY"
+    },
+    "timestamp": "2025-12-24T12:25:50.197Z",
+    "ip": "127.0.0.1"
+  },
+  {
+    "action": "login",
+    "adminId": "admin001",
+    "details": {
+      "email": "jeffreyudenze@gmail.com"
+    },
+    "timestamp": "2025-12-24T13:13:17.204Z",
+    "ip": "127.0.0.1"
+  },
+  {
+    "action": "add_balance",
+    "adminId": "admin001",
+    "details": {
+      "targetUser": "user_1766578896830",
+      "targetUserName": "Nancy longerbeam",
+      "targetUserEmail": "reeky4@gmail.com",
+      "amount": 1000,
+      "oldBalance": 1000,
+      "newBalance": 2000,
+      "note": "REEKY"
+    },
+    "timestamp": "2025-12-24T13:55:39.543Z",
+    "ip": "127.0.0.1"
+  },
+  {
+    "action": "login",
+    "adminId": "admin001",
+    "details": {
+      "email": "jeffreyudenze@gmail.com"
+    },
+    "timestamp": "2025-12-26T05:34:16.160Z",
+    "ip": "127.0.0.1"
+  },
+  {
+    "action": "add_balance",
+    "adminId": "admin001",
+    "details": {
+      "targetUser": "user_1766578896830",
+      "targetUserName": "Nancy longerbeam",
+      "targetUserEmail": "reeky4@gmail.com",
+      "amount": 5000,
+      "oldBalance": 2000,
+      "newBalance": 7000,
+      "note": "JEPHTER\n"
+    },
+    "timestamp": "2025-12-26T05:34:43.171Z",
+    "ip": "127.0.0.1"
+  },
+  {
+    "action": "add_balance",
+    "adminId": "admin001",
+    "details": {
+      "targetUser": "user_1766578896830",
+      "targetUserName": "Nancy longerbeam",
+      "targetUserEmail": "reeky4@gmail.com",
+      "amount": 5000,
+      "oldBalance": 7000,
+      "newBalance": 12000,
+      "note": "JEPHTER\n"
+    },
+    "timestamp": "2025-12-26T05:43:11.305Z",
+    "ip": "127.0.0.1"
+  }
+]

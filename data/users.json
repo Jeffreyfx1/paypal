@@ -1,0 +1,34 @@
+{
+  "user_1766578896830": {
+    "id": "user_1766578896830",
+    "name": "Nancy longerbeam",
+    "email": "reeky4@gmail.com",
+    "password": "reeky2",
+    "balance": 12000,
+    "role": "user",
+    "created": "2025-12-24T12:21:36.837Z",
+    "status": "active"
+  },
+  "admin001": {
+    "id": "admin001",
+    "name": "PayPal",
+    "email": "jeffreyudenze@gmail.com",
+    "password": "Chibuzor2000",
+    "balance": 1000000,
+    "role": "admin",
+    "created": "2025-12-24T12:21:36.837Z",
+    "status": "active",
+    "adminLevel": "super"
+  },
+  "admin002": {
+    "id": "admin002",
+    "name": "PayPal",
+    "email": "reeky@gmail.com",
+    "password": "reekypaypal",
+    "balance": 1000000,
+    "role": "admin",
+    "created": "2025-12-24T12:21:36.837Z",
+    "status": "active",
+    "adminLevel": "super"
+  }
+}

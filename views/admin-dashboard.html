@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - PayPal</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Admin specific styles */
+        .admin-welcome {
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            color: white;
+            padding: 2rem;
+            border-radius: var(--radius-lg);
+            margin-bottom: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .admin-welcome::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px);
+            background-size: 30px 30px;
+            opacity: 0.2;
+        }
+        
+        .admin-welcome h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .admin-welcome p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+        
+        .admin-welcome-badge {
+            background: linear-gradient(135deg, #ff6b6b, #ff8e53);
+            color: white;
+            padding: 5px 15px;
+            border-radius: var(--radius-full);
+            font-size: 0.9rem;
+            font-weight: 600;
+            display: inline-block;
+            margin-top: 1rem;
+        }
+        
+        .data-table {
+            background: white;
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            box-shadow: var(--shadow-md);
+            margin-bottom: 2rem;
+        }
+        
+        .table-header {
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            color: white;
+            padding: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .table-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .table-container {
+            overflow-x: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th {
+            background: var(--gray-light);
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            color: var(--gray-dark);
+            border-bottom: 2px solid var(--gray-light);
+        }
+        
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--gray-light);
+        }
+        
+        tr:hover {
+            background: var(--light-blue);
+        }
+        
+        .user-role {
+            padding: 4px 12px;
+            border-radius: var(--radius-full);
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        
+        .role-admin {
+            background: rgba(231, 76, 60, 0.1);
+            color: var(--danger);
+        }
+        
+        .role-user {
+            background: rgba(52, 152, 219, 0.1);
+            color: var(--accent-blue);
+        }
+        
+        .action-btns {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .btn-table {
+            padding: 6px 12px;
+            font-size: 0.85rem;
+            border-radius: var(--radius-sm);
+            border: none;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+        
+        .btn-table.edit {
+            background: rgba(52, 152, 219, 0.1);
+            color: var(--accent-blue);
+        }
+        
+        .btn-table.delete {
+            background: rgba(231, 76, 60, 0.1);
+            color: var(--danger);
+        }
+        
+        .btn-table.funds {
+            background: rgba(40, 167, 69, 0.1);
+            color: var(--success);
+        }
+        
+        .btn-table:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .search-box {
+            position: relative;
+            width: 300px;
+        }
+        
+        .search-box input {
+            width: 100%;
+            padding: 10px 40px 10px 15px;
+            border: 2px solid var(--gray-light);
+            border-radius: var(--radius-full);
+            font-size: 0.95rem;
+        }
+        
+        .search-box i {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--gray);
+        }
+        
+        .real-time-update {
+            background: white;
+            padding: 1rem;
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.9rem;
+            color: var(--success);
+        }
+        
+        .real-time-update i {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
+        }
+        
+        /* Email validation styles */
+        .user-info-preview {
+            animation: fadeIn 0.3s ease-in;
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 8px;
+            border-left: 4px solid #0070ba;
+            margin-top: 10px;
+        }
+        
+        .user-info-preview.found {
+            border-left-color: var(--success);
+        }
+        
+        .user-info-preview.not-found {
+            border-left-color: var(--danger);
+        }
+        
+        .user-info-preview small {
+            display: block;
+            margin-bottom: 4px;
+        }
+        
+        .email-validation {
+            font-size: 0.85rem;
+            margin-top: 5px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .email-validation.valid {
+            color: var(--success);
+        }
+        
+        .email-validation.invalid {
+            color: var(--danger);
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="admin-dashboard">
+    <!-- Admin Navigation -->
+    <nav class="nav-main admin-nav">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <img src="/assets/logo.png" alt="PayPal Logo" class="paypal-logo">
+                <span>PayPal Admin</span>
+            </div>
+            
+            <div class="nav-menu">
+                <a href="/admin-dashboard" class="nav-button active">
+                    <i class="fas fa-tachometer-alt"></i>
+                    Dashboard
+                </a>
+                <a href="#" class="nav-button" onclick="showSection('users')">
+                    <i class="fas fa-users"></i>
+                    Users
+                </a>
+                <a href="#" class="nav-button" onclick="showSection('transactions')">
+                    <i class="fas fa-exchange-alt"></i>
+                    Transactions
+                </a>
+                <a href="#" class="nav-button" onclick="showSection('logs')">
+                    <i class="fas fa-history"></i>
+                    Logs
+                </a>
+                <a href="/admin-logout" class="nav-button logout">
+                    <i class="fas fa-sign-out-alt"></i>
+                    Logout
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Welcome Section -->
+        <div class="admin-welcome">
+            <h1>Welcome, <span id="adminName">Admin</span>!</h1>
+            <p>Manage your PayPal system efficiently with real-time monitoring and control.</p>
+            <div class="admin-welcome-badge">
+                <i class="fas fa-shield-alt"></i> Super Admin Access
+            </div>
+            <div class="real-time-update" style="position: absolute; bottom: 20px; right: 20px;">
+                <i class="fas fa-circle"></i> System Active • Last Updated: <span id="lastUpdate">Now</span>
+            </div>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="admin-stats-grid">
+            <div class="admin-stat-card users">
+                <div class="stat-label">Total Users</div>
+                <div class="stat-value" id="statUsers">0</div>
+                <div><i class="fas fa-user-plus"></i> <span id="statNewUsers">0</span> new today</div>
+            </div>
+            <div class="admin-stat-card balance">
+                <div class="stat-label">Total Balance</div>
+                <div class="stat-value" id="statBalance">$0</div>
+                <div><i class="fas fa-chart-line"></i> System-wide funds</div>
+            </div>
+            <div class="admin-stat-card transactions">
+                <div class="stat-label">Transactions</div>
+                <div class="stat-value" id="statTransactions">0</div>
+                <div><i class="fas fa-exchange-alt"></i> <span id="statTodayTx">0</span> today</div>
+            </div>
+            <div class="admin-stat-card admins">
+                <div class="stat-label">Administrators</div>
+                <div class="stat-value" id="statAdmins">1</div>
+                <div><i class="fas fa-user-shield"></i> Active admins</div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="admin-actions-grid">
+            <div class="admin-action-card" onclick="showAddUserModal()">
+                <div class="admin-action-icon">
+                    <i class="fas fa-user-plus"></i>
+                </div>
+                <h3>Add New User</h3>
+                <p>Create a new user account with custom balance and settings</p>
+            </div>
+            <div class="admin-action-card" onclick="showAddFundsModal()">
+                <div class="admin-action-icon">
+                    <i class="fas fa-money-bill-wave"></i>
+                </div>
+                <h3>Add Funds</h3>
+                <p>Add money to any user's account instantly</p>
+            </div>
+            <div class="admin-action-card" onclick="showSection('users')">
+                <div class="admin-action-icon">
+                    <i class="fas fa-cog"></i>
+                </div>
+                <h3>Manage System</h3>
+                <p>Configure system settings and preferences</p>
+            </div>
+        </div>
+
+        <!-- Users Table -->
+        <div id="usersSection">
+            <div class="data-table">
+                <div class="table-header">
+                    <h3><i class="fas fa-users"></i> User Management</h3>
+                    <div class="table-actions">
+                        <div class="search-box">
+                            <input type="text" id="userSearch" placeholder="Search users..." onkeyup="filterUsers()">
+                            <i class="fas fa-search"></i>
+                        </div>
+                        <button class="btn btn-success" onclick="showAddUserModal()">
+                            <i class="fas fa-plus"></i> Add User
+                        </button>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table id="usersTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Balance</th>
+                                <th>Role</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTableBody">
+                            <!-- Users will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Transactions Table -->
+        <div id="transactionsSection" style="display: none;">
+            <div class="data-table">
+                <div class="table-header">
+                    <h3><i class="fas fa-exchange-alt"></i> Transaction History</h3>
+                </div>
+                <div class="table-container">
+                    <table id="transactionsTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Type</th>
+                                <th>From</th>
+                                <th>To</th>
+                                <th>Amount</th>
+                                <th>Time</th>
+                            </tr>
+                        </thead>
+                        <tbody id="transactionsTableBody">
+                            <!-- Transactions will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Logs Table -->
+        <div id="logsSection" style="display: none;">
+            <div class="data-table">
+                <div class="table-header">
+                    <h3><i class="fas fa-history"></i> Admin Activity Logs</h3>
+                </div>
+                <div class="table-container">
+                    <table id="logsTable">
+                        <thead>
+                            <tr>
+                                <th>Action</th>
+                                <th>Admin</th>
+                                <th>Details</th>
+                                <th>IP</th>
+                                <th>Time</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logsTableBody">
+                            <!-- Logs will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div class="modal" id="addUserModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add New User</h2>
+                <button class="modal-close" onclick="closeModal('addUserModal')">&times;</button>
+            </div>
+            <form id="addUserForm">
+                <div class="form-group">
+                    <label class="form-label">Full Name</label>
+                    <input type="text" class="form-input" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email Address</label>
+                    <input type="email" class="form-input" name="email" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" class="form-input" name="password" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Initial Balance</label>
+                    <input type="number" class="form-input" name="initialBalance" step="0.01" min="0" value="100">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Role</label>
+                    <select class="form-input" name="role">
+                        <option value="user">User</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-success" style="width: 100%;">
+                    <i class="fas fa-user-plus"></i> Create User
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal" id="addFundsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add Funds to User</h2>
+                <button class="modal-close" onclick="closeModal('addFundsModal')">&times;</button>
+            </div>
+            <form id="addFundsForm">
+                <div class="form-group">
+                    <label class="form-label">User Email</label>
+                    <input type="email" class="form-input" id="fundsUserEmail" name="email" required placeholder="user@example.com">
+                    <div class="email-validation" id="emailValidation"></div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Amount</label>
+                    <input type="number" class="form-input" name="amount" step="0.01" min="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Notes</label>
+                    <textarea class="form-input" name="note" rows="3" placeholder="Optional note about this transaction"></textarea>
+                </div>
+                <div id="userInfoBox" style="display: none;">
+                    <div class="user-info-preview" id="userInfoPreview">
+                        <small><i class="fas fa-user"></i> User: <span id="previewUserName">-</span></small>
+                        <small><i class="fas fa-id-card"></i> ID: <span id="previewUserId">-</span></small>
+                        <small><i class="fas fa-wallet"></i> Current Balance: $<span id="previewUserBalance">0.00</span></small>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-success" style="width: 100%;">
+                    <i class="fas fa-money-bill-wave"></i> Add Funds
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Load admin data
+        fetch('/api/admin/stats')
+            .then(res => res.json())
+            .then(stats => {
+                document.getElementById('statUsers').textContent = stats.totalUsers;
+                document.getElementById('statBalance').textContent = '$' + stats.totalBalance.toFixed(2);
+                document.getElementById('statTransactions').textContent = stats.totalTransactions;
+                document.getElementById('statTodayTx').textContent = stats.todayTransactions;
+                document.getElementById('statAdmins').textContent = stats.admins;
+                // Simulate new users for demo
+                document.getElementById('statNewUsers').textContent = Math.floor(Math.random() * 10);
+            });
+
+        // Load users
+        function loadUsers() {
+            fetch('/api/admin/users')
+                .then(res => res.json())
+                .then(users => {
+                    const tbody = document.getElementById('usersTableBody');
+                    tbody.innerHTML = '';
+                    
+                    Object.entries(users).forEach(([id, user]) => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td><code>${id}</code></td>
+                            <td>
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <div style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #0070ba, #009cde); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
+                                        ${user.name.charAt(0).toUpperCase()}
+                                    </div>
+                                    ${user.name}
+                                </div>
+                            </td>
+                            <td>${user.email}</td>
+                            <td><strong>$${user.balance.toFixed(2)}</strong></td>
+                            <td><span class="user-role role-${user.role}">${user.role.toUpperCase()}</span></td>
+                            <td><span class="status-${user.status || 'active'}">${user.status || 'active'}</span></td>
+                            <td>
+                                <div class="action-btns">
+                                    <button class="btn-table edit" onclick="editUser('${user.email}')">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn-table funds" onclick="addFundsTo('${user.email}', '${user.name}')">
+                                        <i class="fas fa-money-bill"></i>
+                                    </button>
+                                    <button class="btn-table delete" onclick="deleteUser('${user.email}')">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                });
+        }
+
+        // Filter users based on search
+        function filterUsers() {
+            const search = document.getElementById('userSearch').value.toLowerCase();
+            const rows = document.querySelectorAll('#usersTableBody tr');
+            
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                if (text.includes(search)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        // Show/hide sections
+        function showSection(section) {
+            document.querySelectorAll('.nav-button').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            document.getElementById('usersSection').style.display = 'none';
+            document.getElementById('transactionsSection').style.display = 'none';
+            document.getElementById('logsSection').style.display = 'none';
+            
+            document.getElementById(section + 'Section').style.display = 'block';
+            
+            if (section === 'users') loadUsers();
+            if (section === 'transactions') loadTransactions();
+            if (section === 'logs') loadLogs();
+        }
+
+        // Modal functions
+        function showAddUserModal() {
+            document.getElementById('addUserModal').classList.add('active');
+        }
+
+        function showAddFundsModal() {
+            document.getElementById('addFundsModal').classList.add('active');
+            // Clear previous user info
+            document.getElementById('userInfoBox').style.display = 'none';
+            document.getElementById('emailValidation').textContent = '';
+            document.getElementById('fundsUserEmail').focus();
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        function addFundsTo(userEmail, userName = '') {
+            document.getElementById('fundsUserEmail').value = userEmail;
+            if(userName) {
+                // Try to fetch user info
+                fetch(`/api/admin/find-user-by-email?email=${encodeURIComponent(userEmail)}`)
+                    .then(res => res.json())
+                    .then(result => {
+                        if(result.success && result.found) {
+                            showUserInfo(result);
+                        }
+                    });
+            }
+            showAddFundsModal();
+        }
+
+        // Email validation on input
+        document.getElementById('fundsUserEmail')?.addEventListener('input', function() {
+            const email = this.value.trim();
+            const validationDiv = document.getElementById('emailValidation');
+            
+            if(email.length === 0) {
+                validationDiv.textContent = '';
+                document.getElementById('userInfoBox').style.display = 'none';
+                return;
+            }
+            
+            // Basic email validation
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if(!emailRegex.test(email)) {
+                validationDiv.textContent = 'Please enter a valid email address';
+                validationDiv.className = 'email-validation invalid';
+                document.getElementById('userInfoBox').style.display = 'none';
+                return;
+            }
+            
+            // Check if user exists
+            validationDiv.textContent = 'Checking user...';
+            validationDiv.className = 'email-validation';
+            
+            fetch(`/api/admin/find-user-by-email?email=${encodeURIComponent(email)}`)
+                .then(res => res.json())
+                .then(result => {
+                    if(result.success && result.found) {
+                        validationDiv.innerHTML = '<i class="fas fa-check-circle"></i> User found';
+                        validationDiv.className = 'email-validation valid';
+                        showUserInfo(result);
+                    } else {
+                        validationDiv.innerHTML = '<i class="fas fa-exclamation-circle"></i> User not found';
+                        validationDiv.className = 'email-validation invalid';
+                        document.getElementById('userInfoBox').style.display = 'none';
+                    }
+                })
+                .catch(error => {
+                    validationDiv.textContent = 'Error checking user';
+                    validationDiv.className = 'email-validation invalid';
+                    document.getElementById('userInfoBox').style.display = 'none';
+                });
+        });
+
+        function showUserInfo(userData) {
+            document.getElementById('previewUserName').textContent = userData.name;
+            document.getElementById('previewUserId').textContent = userData.id;
+            document.getElementById('previewUserBalance').textContent = userData.balance.toFixed(2);
+            
+            const infoPreview = document.getElementById('userInfoPreview');
+            infoPreview.className = 'user-info-preview found';
+            document.getElementById('userInfoBox').style.display = 'block';
+        }
+
+        // Form submissions
+        document.getElementById('addUserForm')?.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            const data = Object.fromEntries(formData);
+            
+            fetch('/api/admin/create-user', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+            .then(res => res.json())
+            .then(result => {
+                if (result.success) {
+                    alert('✅ User created successfully!');
+                    closeModal('addUserModal');
+                    loadUsers();
+                } else {
+                    alert('❌ Error: ' + result.error);
+                }
+            });
+        });
+
+        document.getElementById('addFundsForm')?.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            const data = Object.fromEntries(formData);
+            
+            fetch('/api/admin/add-balance', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+            .then(res => res.json())
+            .then(result => {
+                if (result.success) {
+                    alert(`✅ Added $${data.amount} to ${result.user.name}'s account (${result.user.email})`);
+                    closeModal('addFundsModal');
+                    loadUsers();
+                } else {
+                    alert('❌ Error: ' + result.error);
+                }
+            });
+        });
+
+        // Edit user function
+        function editUser(userEmail) {
+            alert('Edit user functionality for: ' + userEmail);
+            // You can implement edit modal here
+        }
+
+        // Delete user function
+        function deleteUser(userEmail) {
+            if(confirm(`Are you sure you want to delete user with email: ${userEmail}?`)) {
+                fetch('/api/admin/delete-user', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: userEmail })
+                })
+                .then(res => res.json())
+                .then(result => {
+                    if (result.success) {
+                        alert('✅ User deleted successfully!');
+                        loadUsers();
+                    } else {
+                        alert('❌ Error: ' + result.error);
+                    }
+                });
+            }
+        }
+
+        // Load users on page load
+        loadUsers();
+
+        // Update last update time
+        function updateTime() {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            document.getElementById('lastUpdate').textContent = timeStr;
+        }
+        setInterval(updateTime, 60000);
+        updateTime();
+
+        // Close modal on outside click
+        document.querySelectorAll('.modal').forEach(modal => {
+            modal.addEventListener('click', function(e) {
+                if (e.target === this) this.classList.remove('active');
+            });
+        });
+
+        // Load transactions function
+        function loadTransactions() {
+            fetch('/api/admin/transactions')
+                .then(res => res.json())
+                .then(transactions => {
+                    const tbody = document.getElementById('transactionsTableBody');
+                    tbody.innerHTML = '';
+                    
+                    transactions.forEach(tx => {
+                        const row = document.createElement('tr');
+                        const date = new Date(tx.timestamp).toLocaleString();
+                        row.innerHTML = `
+                            <td><code>${tx.type}_${tx.timestamp}</code></td>
+                            <td>${tx.type}</td>
+                            <td>${tx.fromName || tx.from}</td>
+                            <td>${tx.toName || tx.to}</td>
+                            <td><strong>$${tx.amount.toFixed(2)}</strong></td>
+                            <td>${date}</td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                });
+        }
+
+        // Load logs function
+        function loadLogs() {
+            fetch('/api/admin/logs')
+                .then(res => res.json())
+                .then(logs => {
+                    const tbody = document.getElementById('logsTableBody');
+                    tbody.innerHTML = '';
+                    
+                    logs.forEach(log => {
+                        const row = document.createElement('tr');
+                        const date = new Date(log.timestamp).toLocaleString();
+                        row.innerHTML = `
+                            <td>${log.action}</td>
+                            <td>${log.adminId}</td>
+                            <td>${JSON.stringify(log.details)}</td>
+                            <td>${log.ip}</td>
+                            <td>${date}</td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                });
+        }
+    </script>
+</body>
+</html>
